@@ -1,11 +1,21 @@
+from pathlib import Path
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
 
-class Clave:
+
+class CryptoManager:
     def __init__(self):
-        self.__private_key = self.__generate_private_key()
-        self.__public_key = self.__generate_public_key(self.__private_key)
+        self._private_key_route = './keys/private_key.pem'
+        self._public_key_route = './keys/public_key.pem'
+        self.__private_key = None
+        self.__public_key = None
+        # Hacer aquí la comprobación de si existe la carpeta con las claves
 
+        self.initialize_keys()
 
     @property
     def public_key(self):
@@ -35,9 +45,6 @@ class Clave:
         )
         return pem
 
-    def obtain_private_key(self):
-        return self.__serialize_private_key(self.__generate_private_key())
-
     @staticmethod
     def __generate_public_key(private_key):
         public_key = private_key.public_key()
@@ -51,14 +58,41 @@ class Clave:
         )
         return pem
 
-    def obtain_public_key(self, private_key):
-        return self.__serialize_public_key(self.__generate_public_key(private_key))
+    def initialize_keys(self):
+        self.__private_key = self.__generate_private_key()
+        self.__public_key = self.__generate_public_key(self.__private_key)
+
+    def sign_data(self, data: bytes) -> bytes:
+        signature = self.__private_key.sign(
+            data,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return signature
+
+    def verify_data(self, data: bytes, signature: bytes) -> bool:
+        try:
+            self.__public_key.verify(
+                signature,
+                data,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+            return True
+        except InvalidSignature:
+            return False
 
 
 if __name__ == '__main__':
-    clave = Clave()
-    with open('private_key.pem', 'wb') as f:
-        f.write(clave.private_key)
+    gestor = CryptoManager()
+    with open('./keys/private_key.pem', 'wb') as f:
+        f.write(gestor.private_key)
 
-    with open('public_key.pem', 'wb') as f:
-        f.write(clave.private_key)
+    with open('./keys/public_key.pem', 'wb') as f:
+        f.write(gestor.private_key)
