@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
-
+# migrar a EdDSA (Ed25519)
 class CryptoManager:
     def __init__(self):
         self._private_key_route = './keys/private_key.pem'
@@ -45,11 +45,13 @@ class CryptoManager:
         )
         return pem
 
+    # Method that generates the public key from the private key
     @staticmethod
     def __generate_public_key(private_key):
         public_key = private_key.public_key()
         return public_key
 
+    # Method that serializes the public key
     @staticmethod
     def __serialize_public_key(key):
         pem = key.public_bytes(
