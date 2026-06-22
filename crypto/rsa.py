@@ -1,4 +1,4 @@
-from pathlib import Path
+import os
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -6,16 +6,21 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
-# migrar a EdDSA (Ed25519)
-class CryptoManager:
+class CryptoManagerRSA:
     def __init__(self):
-        self._private_key_route = './keys/private_key.pem'
-        self._public_key_route = './keys/public_key.pem'
+        self._private_key_route = '../keys/private_key.pem'
+        self._public_key_route = '../keys/public_key.pem'
         self.__private_key = None
         self.__public_key = None
-        # Hacer aquí la comprobación de si existe la carpeta con las claves
 
-        self.initialize_keys()
+        # Checks if the pair of keys exist
+
+        if os.path.exists(self._private_key_route) and os.path.exists(self._public_key_route):
+            print("Loading keys...")
+            self.load_keys()
+        else:
+            print("Generating keys...")
+            self.initialize_keys()
 
     @property
     def public_key(self):
@@ -60,9 +65,28 @@ class CryptoManager:
         )
         return pem
 
+    # Initializes private and public keys, and stores them
     def initialize_keys(self):
         self.__private_key = self.__generate_private_key()
         self.__public_key = self.__generate_public_key(self.__private_key)
+
+        with open('../keys/private_key.pem', 'wb') as f:
+            f.write(self.private_key)
+
+        with open('../keys/public_key.pem', 'wb') as f:
+            f.write(self.public_key)
+
+    # Loads private and public keys
+    def load_keys(self):
+        with open(self._private_key_route, 'rb') as f:
+            self.__private_key = serialization.load_pem_private_key(
+                f.read(),
+                password=None
+            )
+        with open(self._public_key_route, 'rb') as f:
+            self.__public_key = serialization.load_pem_public_key(
+                f.read()
+            )
 
     def sign_data(self, data: bytes) -> bytes:
         signature = self.__private_key.sign(
@@ -92,9 +116,4 @@ class CryptoManager:
 
 
 if __name__ == '__main__':
-    gestor = CryptoManager()
-    with open('./keys/private_key.pem', 'wb') as f:
-        f.write(gestor.private_key)
-
-    with open('./keys/public_key.pem', 'wb') as f:
-        f.write(gestor.private_key)
+    gestor = CryptoManagerRSA()
